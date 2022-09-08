@@ -1,1 +1,13 @@
-/
+Brian Chung
+
+1.
+Future warning occured
+FutureWarning: In a future version, DataFrame.mean(axis=None) will return a scalar mean over the entire DataFrame. To retain the old behavior, use 'frame.mean(axis=0)' or just 'frame.mean()'
+
+To avoid future warning, add axis = 0 to the numpy mean, min and max function
+=> mean_all = np.mean(iris_stats, axis = 0)
+
+2. 
+In line 76, variable X has already been standarized and transformed in line 51. It is better to replace X in line 76 to original data(iris_stats) so that pipline can standarize the data.
+X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
+=> X_train, X_test, y_train, y_test = train_test_split(iris_stats, y, random_state=42)
