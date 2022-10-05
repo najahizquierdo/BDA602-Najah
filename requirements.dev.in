@@ -6,3 +6,4 @@ jupyterlab
 pip-tools
 pre-commit==2.20.0
 nose
+mariadb
