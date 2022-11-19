@@ -1,109 +1,192 @@
 import numpy as np
 import pandas as pd
 import statsmodels.api
+from itertools import combinations
 from plotly import express as px
 from plotly import graph_objects as go
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 
 
 def correlation_metrics(x):
     pearsoncorr = x.corr(method="pearson")
-    fig = px.imshow(pearsoncorr)
-    fig.show()
+    fig = px.imshow(pearsoncorr, color_continuous_scale=px.colors.sequential.RdBu)
+    # fig.show();
 
 
-def random_forest_var_imp(df, res, cols):
-    forest = RandomForestClassifier(random_state=0)
-    forest.fit(df[cols], res)
+
+def feature_importance(X, y, cols):
+    forest = RandomForestClassifier(n_estimators=150, random_state=0)
+    forest.fit(X, y)
     imp = forest.feature_importances_
-    for_imp = pd.Series(imp, index=cols)
-    forest_imp_sort = for_imp.sort_values(ascending=True)
-    return forest_imp_sort
+    std = np.std([tree.feature_importances_ for tree in forest.estimators_], axis=0)
+    idx = np.argsort(imp)[::-1]
+    labels = []
+    for f in range(X.shape[1]):
+        labels.append(cols[f])
+    plt.figure(figsize=(15, 10))
+    plt.title("Feature Importance:")
+    plt.bar(range(X.shape[1]), imp[idx],
+            color="y", yerr=std[idx], align="center")
+    plt.xticks(range(X.shape[1]), labels, rotation='vertical')
+    plt.xlim([-1, X.shape[1]])
+    #plt.show();
 
+def brute_force(X, y):
+   for pred1, pred2 in combinations(X.columns, 2):
+        data = pd.DataFrame()
+        pred1_list = []
+        pred2_list = []
+        pred1_df = pd.cut(X[pred1], bins = 10)
+        pred2_df = pd.cut(X[pred2], bins =10)
+        data["response"] = y
+        data["Pred1_data"] = pred1_df
+        data["Pred2_data"] = pred2_df
+        for a, val in data.groupby(["Pred1_data", "Pred2_data"]):
+            mean_calc = np.array(val["response"]).mean()
+            pred1_list.append([a[0], a[1], mean_calc])
+            pred2_list.append(len(val))
+            df_list = pd.DataFrame(pred1_list, columns=["Pred1_data", "Pred2_data", "mean_calc"])
+            final_df = df_list.pivot(
+                index="Pred1_data",
+                columns="Pred2_data",
+                values="mean_calc"
+            )
+        fig = go.Figure()
+        fig.add_trace(
+            go.Heatmap(
+                 x=final_df.columns.astype("str"),
+                 y=final_df.index.astype("str"),
+                 z=np.array(final_df),
+                colorscale='RdBu'
+            )
+        )
+        fig.update_layout(
+            title=f'{pred1} vs {pred2}'
+         )
+        #fig.show()
+def mean_of_response(X, y):
+    for pred1 in X.columns:
+        data = pd.DataFrame()
+        list_1 = []
+        pred1_df = pd.cut(X[pred1], bins=8)
+        data["Pred1"] = pred1_df
+        data["response"] = y
+        for a, val in data.groupby(["Pred1"]):
+            calculation = np.array(val["response"])
+            mor = np.mean(calculation)
+            list_1.append([mor, a, len(val)])
+            list_2 = pd.DataFrame(list_1, columns=["d_mean", "Pred1", "pop_mean"])
+            list_2["bin"] = list_2["Pred1"].apply(lambda x: x.mid)
+            list_2["pop_mean"] = np.mean(y)
+        fig_2 = go.Figure(
+            layout=go.Layout(
+                title=f"Binned Mean of Response for {pred1}",
+                yaxis2=dict(overlaying="y"),
+            )
+        )
+        fig_2.add_trace(
+            go.Bar(
+                x=list_2["bin"],
+                y=list_2["pop_mean"],
+                yaxis="y"
+            )
+        )
+        fig_2.add_trace(
+            go.Scatter(
+                x=list_2["bin"],
+                y=list_2["d_mean"],
+                yaxis="y",
+                mode="lines",
+                line=go.scatter.Line(color="pink"),
+            )
+        )
+        fig_2.add_trace(
+            go.Scatter(
+                x=list_2["bin"],
+                y=list_2["pop_mean"],
+                yaxis="y2",
+                mode="lines",
+                line=go.scatter.Line(color="green"),
+            )
+        )
+        fig_2.show()
 
-# def linear_regression(df, response):
-#     predictor = statsmodels.api.add_constant(df['strikeout_to_walk_ratio'])
-#     linear_regression_model = statsmodels.api.OLS(response, predictor)
-#     linear_regression_model_fitted = linear_regression_model.fit()
-#     t_value = round(linear_regression_model_fitted.tvalues[1], 6)
-#     p_value = "{:.6e}".format(linear_regression_model_fitted.pvalues[1])
-#     filename = f"plots/{predictor}_{response}_linear_regression.html"
-#     # Plot the figure
-#     fig = px.scatter(
-#         data_frame=df,
-#         x=predictor,
-#         y=response,
-#         trendline="ols",
-#         title=f"(t-value={t_value}) (p-value={p_value})",
-#     )
-
-
-def df_processing(df, response):
-    # -- DETERMINE PREDICTORS/ SPLIT --
-    df.dropna()
-    col = df.columns
-    numerical_cols = df._get_numeric_data().columns
-    numerical_cols = numerical_cols.drop(["game_id", "binary_winner"])
-    x = list(set(col) - set(numerical_cols))
-    y = list(df.select_dtypes(bool))
-    cat_comparisons = x + y
-    # dont think i need this part but i'll leave it in to make me feel like i've done more lol
-    cont_predictors = list()
-    cat_predictors = list()
-    for i in df:
-        if i in cat_comparisons:
-            print(f"{i} is categorical")
-            cat_predictors.append(i)
-
-        else:
-            print(f"{i} is continuous")
-            p = 1
-            cont_predictors.append(i)
-    CONT_COLUMNS = list()
-    CAT_COLUMNS = list()
-    for colName, i in df.iteritems():
-        if colName in cat_predictors:
-            CAT_COLUMNS.append(i)
-        else:
-            CONT_COLUMNS.append(i)
-    cont_resp = pd.DataFrame(CONT_COLUMNS)
-    print(cont_resp)
-    cat_resp = pd.DataFrame(CAT_COLUMNS)
-    print(cat_resp)
-    cont_resp_T = cont_resp.T
-    correlation_metrics(cont_resp_T)
-
+def linear_regression(df, numerical_cols, response):
     for a in numerical_cols:
         feature_data = df[a]
         predictor = statsmodels.api.add_constant(feature_data)
-        linear_regression_model = statsmodels.api.OLS(response, predictor)
-        linear_regression_model_fitted = linear_regression_model.fit()
-        print(linear_regression_model_fitted.summary())
+        linear_regression_model_fitted = statsmodels.api.OLS(response, predictor).fit()
+        #print(linear_regression_model_fitted.summary())
         t_value = round(linear_regression_model_fitted.tvalues[1], 6)
         p_value = "{:.6e}".format(linear_regression_model_fitted.pvalues[1])
+        fig = px.scatter(x=feature_data, y=response, trendline="ols")
+        fig.update_layout(
+            title=f"(Variable: {a} and {df.columns[1]}, t-value={t_value}) (p-value={p_value})",
+            xaxis_title=f"Variable: {a}",
+            yaxis_title=str(df.columns[1]),
+        )
+        # fig.show()
+
+def cont_plots(df, numerical_cols, response):
+    y = df[response]
+    for a in numerical_cols:
+        #distribution plot
+        plt.figure(figsize=(12, 8))
+        sns.distplot(df[a], bins=10)
+        plt.title(f"Distribution by" + f"{a}")
+        plt.xlabel(f"{a}")
+        # plt.show();
+        #histogram
         fig1 = px.histogram(
             df,
-            x=feature_data,
-            color=response,
+            x=df[a],
+            color=y,
         )
         fig1.update_layout(
             title="histogram",
-            xaxis_title="Response=" + "Home Team Win",
-            yaxis_title="Predictor=" + a,
+            xaxis_title="Response=" + f"{response}",
+            yaxis_title="Predictor=" + f"{a}",
         )
-        fig1.show()
+        # fig1.show()
+        #violin plot
         fig_2 = go.Figure(
             data=go.Violin(
-                x=response,
-                y=feature_data,
+                x=y,
+                y=df[a],
                 fillcolor="pink",
                 opacity=0.7,
             )
         )
         fig_2.update_layout(
             yaxis_zeroline=False,
-            title="histogram",
-            xaxis_title="Response=" + "Home Team Win",
+            title="Violin",
+            xaxis_title="Response=" + f"{response}",
             yaxis_title="Predictor=" + a,
         )
-        fig_2.show()
+        # fig_2.show()
+
+
+def df_processing(df, response):
+    df = df.dropna()
+    #drop game_id and binary for usage
+    numerical_cols = df._get_numeric_data().columns.drop('game_id')
+    numerical_cols = numerical_cols.drop(response)
+    X = df.loc[:, numerical_cols]
+    y = df[response]
+    #correlation
+    correlation_metrics(df)
+    ## feature importance
+    feature_importance(X, y, numerical_cols)
+    ## linear regression
+    linear_regression(df, numerical_cols, y)
+    # plots
+    cont_plots(df, numerical_cols, response)
+    ## split
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20, random_state=0)
+    #brute force
+    brute_force(X_train, y_train)
+    #mean of resp
+    mean_of_response(X_train,y_train)
