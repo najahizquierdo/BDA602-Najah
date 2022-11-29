@@ -5,3 +5,6 @@ scikit-learn
 mariadb
 pyspark
 pyspark-stubs
+sqlalchemy
+seaborn
+plotly
