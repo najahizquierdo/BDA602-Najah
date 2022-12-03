@@ -1,0 +1,25 @@
+version: "3.3"
+services:
+  najah-db:
+    image: lscr.io/linuxserver/mariadb:latest
+    container_name: najah-db
+    environment:
+      - MYSQL_USER=root
+      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_DATABASE=baseball
+      - TZ=America/Los Angeles
+    volumes:
+      - "./db:/config"
+    restart: unless-stopped
+
+  baseball_container:
+    image: baseball_container
+    container_name: baseball_container
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    volumes:
+      - "./final:/app/results"
+    depends_on:
+      - najah-db
+    restart: unless-stopped
