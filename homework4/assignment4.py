@@ -1,15 +1,14 @@
 import sys
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 import statsmodels.api
 from plotly import express as px
 from plotly import figure_factory as ff
 from plotly import graph_objects as go
-from sklearn.metrics import confusion_matrix
-from sklearn import datasets
 from sklearn.datasets import load_diabetes
-from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import confusion_matrix
 
 
 # check if response is cont or bool
@@ -18,13 +17,13 @@ def response_bool_or_cont(col):
     for i in col:
         targ.append(i)
     targ_df = pd.DataFrame(targ)
-    if col is bool and str or np.unique(targ_df).size / targ_df.size < .05:
+    if col is bool and str or np.unique(targ_df).size / targ_df.size < 0.05:
         return True
     else:
         return False
 
 
-#this is super incorrect ask for help @ office hours
+# this is super incorrect ask for help @ office hours
 # def diff_mean_of_response(predictor, response):
 #     pred_min = predictor.max()
 #     pred_max = predictor.min()
@@ -33,8 +32,6 @@ def response_bool_or_cont(col):
 #         bin_size = (pred_min - pred_max)
 #         sqr_bin = math.pow(bin_size,2)
 #     fig = px.histogram(df, x=sqr_bin, y=pop_mean)
-
-
 
 
 def main():
@@ -46,22 +43,19 @@ def main():
     X_df_arr = np.array(X_df)
     t = data["target"]
     target = pd.DataFrame(t)
-    targ_arr = np.array(target)
     # determine if response is cont or bool
     if response_bool_or_cont(t) is True:
-        response = 1 #categorical
+        response = 1  # categorical
         print("Response is boolean.")
     else:
-        response = 0 #continuous
+        response = 0  # continuous
         print("Response is continuous.")
     # determine if predictor is cat or continuous
     predictors = []
     for a in df.columns:
         if response_bool_or_cont(a) is True:
-            predictor_type = 1 #categorical
+            predictor_type = 1  # categorical
             predictors.append(a)
-            categorical_predictors = pd.DataFrame(predictors)
-            cat_X = np.array(categorical_predictors)
             print(f"{a} is categorical")
         else:
             predictor_type = 0
@@ -70,19 +64,19 @@ def main():
             cont_X = np.array(cont_predictors)
             print(f"{a} is continuous")
 
-    #plots
-    #CON RESPONSE / CON PREDICT
-    #done
+    # plots
+    # CON RESPONSE / CON PREDICT
+    # done
     if response == 0 and predictor_type == 0:
         fig = px.scatter(x=X_df_arr[:, 1], y=t, trendline="ols")
         fig.update_layout(
             title="Continuous Response by Continuous Predictor",
-            xaxis_title = "Predictor",
-            yaxis_title = "Response",
+            xaxis_title="Predictor",
+            yaxis_title="Response",
         )
         fig.show()
 
-    #con response with cat predictor
+    # con response with cat predictor
     if response == 0 and predictor_type == 1:
         # Group data together
         hist_data = X_df_arr[:, 1]
@@ -98,7 +92,7 @@ def main():
         for curr_hist, curr_group in zip(hist_data, group_labels):
             fig_2.add_trace(
                 go.Violin(
-                    x=np.repeat(curr_group, n),
+                    x=np.repeat(curr_group),
                     y=curr_hist,
                     name=curr_group,
                     box_visible=True,
@@ -111,22 +105,22 @@ def main():
             yaxis_title="Response",
         )
         fig_2.show()
-    #cat response with cat predictor
+    # cat response with cat predictor
     if response == 1 and predictor_type == 1:
         conf_matrix = confusion_matrix(X_df_arr, df.columns)
         fig_no_relationship = go.Figure(
-            data = go.Heatmap(z=conf_matrix, zmin=0, zmax=conf_matrix.max())
+            data=go.Heatmap(z=conf_matrix, zmin=0, zmax=conf_matrix.max())
         )
         fig_no_relationship.update_layout(
-            title = "Categorical Predictor by Categorical Resonse (with relationship)",
-            xaxis_title = "Response",
-            yaxis_title = "Predictor",
+            title="Categorical Predictor by Categorical Resonse (with relationship)",
+            xaxis_title="Response",
+            yaxis_title="Predictor",
         )
         fig_no_relationship.show()
 
-    #cat response with con predictor
+    # cat response with con predictor
     if response == 1 and predictor_type == 0:
-        hist_data =X_df_arr[:, 1]
+        hist_data = X_df_arr[:, 1]
         group_labels = df.columns
         fig_1 = ff.create_distplot(hist_data, group_labels, bin_size=0.2)
         fig_1.update_layout(
@@ -139,7 +133,7 @@ def main():
         for curr_hist, curr_group in zip(hist_data, group_labels):
             fig_2.add_trace(
                 go.Violin(
-                    x=np.repeat(curr_group, n),
+                    x=np.repeat(curr_group),
                     y=curr_hist,
                     name=curr_group,
                     box_visible=True,
@@ -173,7 +167,7 @@ def main():
                 xaxis_title=f"Variable: {feature_name}",
                 yaxis_title="y",
             )
-            fig.show()    # Categorical
+            fig.show()  # Categorical
     elif predictor_type == 1:
         # logistic regression
         for a, col in enumerate(X_df_arr.T):
@@ -204,6 +198,7 @@ def main():
         rand_tree = RandomForestClassifier(n_estimators=10)
         rand_tree.fit(cont_X, t)
         print(rand_tree.predict(cont_X))
+
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -1,7 +1,9 @@
 import sys
+
 from pyspark import StorageLevel
-from pyspark.sql import SparkSession
 from pyspark.ml.feature import SQLTransformer
+from pyspark.sql import SparkSession
+
 
 def main():
     appName = "Baseball Scripts in PySpark"
@@ -11,7 +13,7 @@ def main():
 
     driver = "org.mariadb.jdbc.Driver"
     user = "spark"
-    password = "kontext"
+    password = "kontext"  # pragma: allowlist secret
 
     batters_game = spark.sql(
         """
@@ -30,7 +32,7 @@ def main():
     batters_game.persist(StorageLevel.MEMORY_AND_DISK)
 
     t_last100 = spark.sql(
-    """
+        """
       select b.game_id
       , b.local_date
       from batters_game b
@@ -44,7 +46,7 @@ def main():
     t_last100.persist(StorageLevel.MEMORY_AND_DISK)
 
     last100_rolling_avg = spark.sql(
-    """
+        """
       select b.batter
       , b.local_date
       , case when SUM(b.atBat) = 0 then 0
@@ -81,13 +83,14 @@ def main():
         .option("password", password)
         .option("driver", driver)
         .load()
-        )
+    )
     batter_counts.show()
     batter_counts.createOrReplaceTempView("batter_counts")
     batter_counts.persist(StorageLevel.MEMORY_AND_DISK)
 
     sqlTrans = SQLTransformer().setStatement(last100_rolling_avg)
     sqlTrans.transform(batters_game).show()
+
 
 if __name__ == "__main__":
     sys.exit(main())

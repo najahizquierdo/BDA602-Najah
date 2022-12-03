@@ -8,7 +8,7 @@ from midterm import df_processing
 
 def main():
     db_user = "root"
-    db_pass = "x11docker"
+    db_pass = "x11docker"  # pragma: allowlist secret
     db_host = "localhost"
     db_database = "baseball"
     connect_string = (
@@ -18,9 +18,9 @@ def main():
     sql_engine = sqlalchemy.create_engine(connect_string)
 
     results = """
-            SELECT * 
-            FROM final_results 
-            group by game_id
+    SELECT *
+    FROM final_results
+    group by game_id
     """
     game_df = pandas.read_sql_query(results, sql_engine)
     print(game_df.head())

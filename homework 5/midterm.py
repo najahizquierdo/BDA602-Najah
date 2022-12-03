@@ -1,20 +1,20 @@
+from itertools import combinations
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import seaborn as sns
 import statsmodels.api
-from itertools import combinations
 from plotly import express as px
 from plotly import graph_objects as go
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
 
 
 def correlation_metrics(x):
     pearsoncorr = x.corr(method="pearson")
     fig = px.imshow(pearsoncorr, color_continuous_scale=px.colors.sequential.RdBu)
-    # fig.show();
-
+    fig.show()
 
 
 def feature_importance(X, y, cols):
@@ -27,42 +27,42 @@ def feature_importance(X, y, cols):
     for f in range(X.shape[1]):
         labels.append(cols[f])
     plt.title("Feature Importance:")
-    plt.bar(range(X.shape[1]), imp[idx],
-            color="y", yerr=std[idx])
-    plt.xticks(range(X.shape[1]), labels, rotation='vertical')
-    plt.show();
+    plt.bar(range(X.shape[1]), imp[idx], color="y", yerr=std[idx])
+    plt.xticks(range(X.shape[1]), labels, rotation="vertical")
+    plt.show()
+
 
 def brute_force(X, y):
-   for pred1, pred2 in combinations(X.columns, 2):
+    for pred1, pred2 in combinations(X.columns, 2):
         data = pd.DataFrame()
         pred_list = []
-        pred1_df = pd.cut(X[pred1], bins = 10)
-        pred2_df = pd.cut(X[pred2], bins =10)
+        pred1_df = pd.cut(X[pred1], bins=10)
+        pred2_df = pd.cut(X[pred2], bins=10)
         data["response"] = y
         data["Pred1_data"] = pred1_df
         data["Pred2_data"] = pred2_df
         for a, val in data.groupby(["Pred1_data", "Pred2_data"]):
             mean_calc = np.array(val["response"]).mean()
             pred_list.append([a[0], a[1], mean_calc])
-            df_list = pd.DataFrame(pred_list, columns=["Pred1_data", "Pred2_data", "mean_calc"])
+            df_list = pd.DataFrame(
+                pred_list, columns=["Pred1_data", "Pred2_data", "mean_calc"]
+            )
             final_df = df_list.pivot(
-                index="Pred1_data",
-                columns="Pred2_data",
-                values="mean_calc"
+                index="Pred1_data", columns="Pred2_data", values="mean_calc"
             )
         b_fig = go.Figure()
         b_fig.add_trace(
             go.Heatmap(
-                 x=final_df.columns.astype("str"),
-                 y=final_df.index.astype("str"),
-                 z=np.array(final_df),
-                colorscale='RdBu'
+                x=final_df.columns.astype("str"),
+                y=final_df.index.astype("str"),
+                z=np.array(final_df),
+                colorscale="RdBu",
             )
         )
-        b_fig.update_layout(
-            title=f'{pred1} vs {pred2}'
-         )
+        b_fig.update_layout(title=f"{pred1} vs {pred2}")
         b_fig.show()
+
+
 def mean_of_response(X, y):
     for pred1 in X.columns:
         data = pd.DataFrame()
@@ -83,13 +83,7 @@ def mean_of_response(X, y):
                 yaxis2=dict(overlaying="y"),
             )
         )
-        m_fig.add_trace(
-            go.Bar(
-                x=list_2["bin"],
-                y=list_2["pop_mean"],
-                yaxis="y"
-            )
-        )
+        m_fig.add_trace(go.Bar(x=list_2["bin"], y=list_2["pop_mean"], yaxis="y"))
         m_fig.add_trace(
             go.Scatter(
                 x=list_2["bin"],
@@ -110,12 +104,13 @@ def mean_of_response(X, y):
         )
         m_fig.show()
 
+
 def linear_regression(df, numerical_cols, response):
     for a in numerical_cols:
         feature_data = df[a]
         predictor = statsmodels.api.add_constant(feature_data)
         linear_regression_model_fitted = statsmodels.api.OLS(response, predictor).fit()
-        #print(linear_regression_model_fitted.summary())
+        # print(linear_regression_model_fitted.summary())
         t_value = round(linear_regression_model_fitted.tvalues[1], 6)
         p_value = "{:.6e}".format(linear_regression_model_fitted.pvalues[1])
         lr_fig = px.scatter(x=feature_data, y=response, trendline="ols")
@@ -126,16 +121,17 @@ def linear_regression(df, numerical_cols, response):
         )
         # lr_fig.show()
 
+
 def cont_plots(df, numerical_cols, response):
     y = df[response]
     for a in numerical_cols:
-        #distribution plot
+        # distribution plot
         plt.figure(figsize=(12, 8))
         sns.distplot(df[a], bins=10)
-        plt.title(f"Distribution by" + f"{a}")
+        plt.title("Distribution by" + f"{a}")
         plt.xlabel(f"{a}")
         # plt.show();
-        #histogram
+        # histogram
         hist_fig = px.histogram(
             df,
             x=df[a],
@@ -147,7 +143,7 @@ def cont_plots(df, numerical_cols, response):
             yaxis_title="Predictor=" + f"{a}",
         )
         # hist_fig.show()
-        #violin plot
+        # violin plot
         v_plot = go.Figure(
             data=go.Violin(
                 x=y,
@@ -167,22 +163,24 @@ def cont_plots(df, numerical_cols, response):
 
 def df_processing(df, response):
     df = df.dropna()
-    #drop game_id and binary for usage
-    numerical_cols = df._get_numeric_data().columns.drop('game_id')
+    # drop game_id and binary for usage
+    numerical_cols = df._get_numeric_data().columns.drop("game_id")
     numerical_cols = numerical_cols.drop(response)
     X = df[numerical_cols]
     y = df[response]
-    #correlation
+    # correlation
     correlation_metrics(df)
-    ## feature importance
+    # feature importance
     feature_importance(X, y, numerical_cols)
-    ## linear regression
+    # linear regression
     linear_regression(df, numerical_cols, y)
     # plots
     cont_plots(df, numerical_cols, response)
-    ## split
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20, random_state=0)
-    #brute force
+    # split
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.20, random_state=0
+    )
+    # brute force
     brute_force(X_train, y_train)
-    #mean of resp
-    mean_of_response(X_train,y_train)
+    # mean of resp
+    mean_of_response(X_train, y_train)
