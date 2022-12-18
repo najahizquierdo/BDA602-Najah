@@ -1,0 +1,27 @@
+version: "3.3"
+services:
+  db:
+    image: lscr.io/linuxserver/mariadb:latest
+    container_name: db
+    environment:
+      - MYSQL_USER:root
+      - MYSQL_ROOT_PASSWORD:password
+      - MYSQL_CONN="-h127.0.0.1 -u${MYSQL_USER} -p${MYSQL_PASS} --protocol=tcp -P3306"
+      - TZ=America/Los Angeles
+    volumes:
+      - "./db:/config"
+    ports:
+      - 3307:3306
+    restart: on-failure
+
+  baseball_container:
+    image: baseball_container
+    container_name: baseball_container
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    volumes:
+      - "./final:/app/results"
+    depends_on:
+      - db
+    restart: on-failure
