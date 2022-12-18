@@ -29,6 +29,7 @@ def set_html_up():
     text_file2.write("<a href='logistic_reg.html'> <h1> Logistic Regression</h1></a></h1>")
     text_file2.write("<a href='corr_heatmap.html'> <h1> Correlation Matrix </h1></a>")
     text_file2.write("<a href='knn.html'> <h1> k-Nearest Neighbor </h1></a>")
+    text_file2.write("<a href='featureimp.html'> <h1> Feature Importance </h1></a>")
     text_file2.close()
 
 # def model_performance(model_name, score):
@@ -317,7 +318,7 @@ def feature_importance(X, y, cols):
     plt.savefig(t_file, format='png')
     encoded = base64.b64encode(t_file.getvalue()).decode('utf-8')
     html = 'feature_importance' + '<img src=\'data:image/png;base64,{}\'>'.format(encoded)
-    with open('test.html', 'w') as f:
+    with open('featureimp.html', 'w') as f:
         f.write(html)
     #plt.show();
 def tuningRandomizedSearchCV(df, parameters, X, y):
